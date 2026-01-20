@@ -78,4 +78,10 @@ python -c "import torch; print('PyTorch:', torch.__version__); print('XPU:', tor
 Write-Host ""
 Write-Host "Run START_ComfyUI.ps1 to launch"
 Write-Host "================================================================"
+
+# Deactivate virtual environment before exit
+if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+    deactivate
+}
+
 Read-Host "Press Enter to exit..."

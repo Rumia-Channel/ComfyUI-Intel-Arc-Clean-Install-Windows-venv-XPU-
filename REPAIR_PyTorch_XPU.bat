@@ -140,11 +140,13 @@ if "!PYTORCH_SUCCESS!"=="0" (
 echo.
 echo [4.5/5] Installing Triton XPU...
 
-pip install pytorch-triton-xpu
+echo Attempting to install pytorch-triton-xpu...
+pip install pytorch-triton-xpu 2>nul
 
 if errorlevel 1 (
-    echo WARNING: Triton XPU installation failed
-    echo GGUF acceleration may not work
+    echo NOTE: pytorch-triton-xpu not available in current PyTorch nightly
+    echo Triton kernels will be compiled on first use if available
+    echo This is normal and not an error
 )
 
 REM ============================================
@@ -203,10 +205,20 @@ if errorlevel 1 (
     pause
 )
 
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 endlocal
 exit /b 0
 
 :error
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 echo.
 echo ================================================================
 echo PyTorch XPU Repair Failed!

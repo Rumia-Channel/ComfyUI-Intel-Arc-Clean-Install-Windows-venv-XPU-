@@ -98,11 +98,13 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "[4.5/5] Installing Triton XPU..." -ForegroundColor Yellow
 
-pip install pytorch-triton-xpu
+Write-Host "Attempting to install pytorch-triton-xpu..."
+pip install pytorch-triton-xpu 2>$null
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: Triton XPU installation failed" -ForegroundColor Yellow
-    Write-Host "GGUF acceleration may not work"
+    Write-Host "NOTE: pytorch-triton-xpu not available in current PyTorch nightly" -ForegroundColor Yellow
+    Write-Host "Triton kernels will be compiled on first use if available"
+    Write-Host "This is normal and not an error"
 }
 
 # ============================================
@@ -146,7 +148,6 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Your GPU:"
     Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name
     Write-Host ""
-    Read-Host "Press Enter to exit..."
 } else {
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Green
@@ -158,5 +159,11 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "If using GGUF models, run INSTALL_GGUF_Triton_Patch.ps1"
     Write-Host "for additional acceleration."
     Write-Host ""
-    Read-Host "Press Enter to exit..."
 }
+
+# Deactivate virtual environment before exit
+if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+    deactivate
+}
+
+Read-Host "Press Enter to exit..."

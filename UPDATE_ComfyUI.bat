@@ -117,11 +117,22 @@ python -c "import torch; print('PyTorch:', torch.__version__); print('XPU:', tor
 echo.
 echo Run START_ComfyUI.bat to launch
 echo ================================================================
+
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 pause
 endlocal
 exit /b 0
 
 :error
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 echo.
 echo ================================================================
 echo Update Failed!

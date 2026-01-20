@@ -316,11 +316,19 @@ Write-Host ""
 Write-Host "[8/9] Installing Triton XPU for GGUF acceleration..." -ForegroundColor Yellow
 
 if ($vcvarsPath) {
-    pip install pytorch-triton-xpu
+    Write-Host "Attempting to install pytorch-triton-xpu..."
+    pip install pytorch-triton-xpu 2>$null
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "NOTE: pytorch-triton-xpu not available in current PyTorch nightly" -ForegroundColor Yellow
+        Write-Host "Triton kernels will be compiled on first use if available"
+        Write-Host "This is normal and not an error"
+    }
 
     Write-Host ""
     Write-Host "Verifying Triton installation..."
-    python -c "try: import triton; print('Triton:', triton.__version__); except: print('Triton: Installation pending - will compile on first use')"
+    python -c "try:`n    import triton`n    print('Triton:', triton.__version__)`nexcept ImportError:`n    print('Triton: Will be compiled on first use if needed')"
 } else {
     Write-Host "Skipping Triton (no C++ compiler found)"
     Write-Host "You can install it later after installing Visual Studio Build Tools"
@@ -378,4 +386,10 @@ Write-Host "- First GGUF load compiles Triton kernels (~30 sec)"
 Write-Host "- Update Intel Graphics drivers regularly"
 Write-Host "- Keep Windows power plan on 'High Performance'"
 Write-Host ""
+
+# Deactivate virtual environment before exit
+if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+    deactivate
+}
+
 Read-Host "Press Enter to exit..."

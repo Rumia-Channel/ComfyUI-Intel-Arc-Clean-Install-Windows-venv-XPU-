@@ -128,4 +128,10 @@ Write-Host "  - Subsequent loads use cached kernels"
 Write-Host ""
 Write-Host "Next: Run START_ComfyUI.ps1 to launch with optimizations!"
 Write-Host "================================================================"
+
+# Deactivate virtual environment before exit
+if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+    deactivate
+}
+
 Read-Host "Press Enter to exit..."

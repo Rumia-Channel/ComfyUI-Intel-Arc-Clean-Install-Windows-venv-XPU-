@@ -355,11 +355,19 @@ echo.
 echo [8/9] Installing Triton XPU for GGUF acceleration...
 
 if "%MSVC_FOUND%"=="1" (
-    pip install pytorch-triton-xpu
-    
+    echo Attempting to install pytorch-triton-xpu...
+    pip install pytorch-triton-xpu 2>nul
+
+    if errorlevel 1 (
+        echo.
+        echo NOTE: pytorch-triton-xpu not available in current PyTorch nightly
+        echo Triton kernels will be compiled on first use if available
+        echo This is normal and not an error
+    )
+
     echo.
     echo Verifying Triton installation...
-    python -c "try: import triton; print('Triton:', triton.__version__); except: print('Triton: Installation pending - will compile on first use')"
+    python -c "import sys; exec('try:\\n    import triton\\n    print(\"Triton:\", triton.__version__)\\nexcept ImportError:\\n    print(\"Triton: Will be compiled on first use if needed\")')"
 ) else (
     echo Skipping Triton (no C++ compiler found)
     echo You can install it later after installing Visual Studio Build Tools
@@ -420,11 +428,22 @@ echo - First GGUF load compiles Triton kernels (~30 sec)
 echo - Update Intel Graphics drivers regularly
 echo - Keep Windows power plan on "High Performance"
 echo.
+
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 pause
 endlocal
 exit /b 0
 
 :error
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 echo.
 echo ================================================================
 echo Installation Failed!

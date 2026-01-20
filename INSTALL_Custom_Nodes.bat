@@ -183,11 +183,22 @@ echo ================================================================
 echo.
 echo Next: Run INSTALL_GGUF_Triton_Patch.bat for GGUF acceleration
 echo ================================================================
+
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 pause
 endlocal
 exit /b 0
 
 :error
+REM Deactivate virtual environment before exit
+if defined VIRTUAL_ENV (
+    call deactivate 2>nul
+)
+
 echo.
 echo ================================================================
 echo Custom Nodes Installation Failed!

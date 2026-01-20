@@ -117,4 +117,10 @@ Write-Host "================================================================" -F
 Write-Host ""
 Write-Host "Next: Run INSTALL_GGUF_Triton_Patch.ps1 for GGUF acceleration"
 Write-Host "================================================================"
+
+# Deactivate virtual environment before exit
+if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+    deactivate
+}
+
 Read-Host "Press Enter to exit..."
