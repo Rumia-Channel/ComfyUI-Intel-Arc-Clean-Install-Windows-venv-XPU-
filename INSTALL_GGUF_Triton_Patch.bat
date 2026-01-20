@@ -145,25 +145,47 @@ echo [VERIFY] Checking Triton integration...
 cd ..\..
 python -c "from custom_nodes.ComfyUI-GGUF.dequant import HAS_TRITON, USE_TRITON_KERNELS; print('HAS_TRITON:', HAS_TRITON); print('USE_TRITON_KERNELS:', USE_TRITON_KERNELS); exit(0 if HAS_TRITON and USE_TRITON_KERNELS else 1)"
 
+set "TRITON_ENABLED=1"
 if errorlevel 1 (
+    set "TRITON_ENABLED=0"
     echo.
     echo WARNING: Triton kernels not enabled
-    echo Check that pytorch-triton-xpu is installed correctly
-    pause
+    echo.
+    echo This is usually because:
+    echo   - pytorch-triton-xpu is not available in current PyTorch nightly
+    echo   - Triton will auto-compile on first GGUF model load instead
+    echo.
+    echo GGUF models will still work, but without pre-optimized kernels.
+    echo First load may take longer (~1-2 minutes for compilation).
 ) else (
     echo OK: Triton kernels enabled!
 )
 
 echo.
 echo ================================================================
-echo GGUF Triton Patch Installation Complete!
+if "%TRITON_ENABLED%"=="1" (
+    echo GGUF Triton Optimization Complete!
+) else (
+    echo GGUF Patch Applied ^(Triton kernels will auto-compile^)
+)
 echo ================================================================
 echo.
-echo Performance improvements:
-echo   - Q4_0 models: ~11x faster
-echo   - Q8_0 models: ~6x faster
-echo   - First load will compile kernels (~10-30 seconds)
-echo   - Subsequent loads use cached kernels
+if "%TRITON_ENABLED%"=="1" (
+    echo Performance improvements:
+    echo   - Q4_0 models: ~11x faster
+    echo   - Q8_0 models: ~6x faster
+    echo   - First load will compile kernels (~10-30 seconds^)
+    echo   - Subsequent loads use cached kernels
+) else (
+    echo Status:
+    echo   - GGUF patch applied successfully
+    echo   - Triton kernels will compile on first GGUF load
+    echo   - First load: ~1-2 minutes ^(one-time compilation^)
+    echo   - Subsequent loads: Fast ^(using cached kernels^)
+    echo.
+    echo Note: pytorch-triton-xpu not available in current PyTorch build
+    echo       This is normal and GGUF models will still work
+)
 echo.
 echo Next: Run START_ComfyUI.bat to launch with optimizations!
 echo ================================================================

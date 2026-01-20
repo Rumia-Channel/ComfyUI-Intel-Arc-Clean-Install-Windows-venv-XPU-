@@ -52,9 +52,20 @@ if errorlevel 1 (
 )
 
 call "%SCRIPT_DIR%\INSTALL_ComfyUI_Intel_Arc_XPU.bat" "%INSTALL_DIR%"
-if errorlevel 1 (
+set "STEP1_EXIT=%ERRORLEVEL%"
+
+REM Verify installation
+if not exist "%INSTALL_DIR%\comfyui_venv" (
     echo.
     echo ERROR: ComfyUI installation failed!
+    echo Virtual environment not found at: %INSTALL_DIR%\comfyui_venv
+    pause
+    goto :error
+)
+
+if %STEP1_EXIT% NEQ 0 (
+    echo.
+    echo ERROR: ComfyUI installation reported errors!
     echo Please check the error messages above.
     pause
     goto :error
@@ -77,11 +88,13 @@ if errorlevel 1 (
 )
 
 call "%SCRIPT_DIR%\INSTALL_Custom_Nodes.bat" "%INSTALL_DIR%"
-if errorlevel 1 (
+set "STEP2_EXIT=%ERRORLEVEL%"
+
+if %STEP2_EXIT% NEQ 0 (
     echo.
-    echo WARNING: Custom nodes installation had errors
+    echo WARNING: Custom nodes installation reported errors
     echo Continuing with GGUF Triton patch...
-    timeout /t 5 /nobreak >nul 2>&1
+    timeout /t 3 /nobreak >nul 2>&1
 )
 
 REM ============================================
@@ -101,11 +114,13 @@ if errorlevel 1 (
 )
 
 call "%SCRIPT_DIR%\INSTALL_GGUF_Triton_Patch.bat" "%INSTALL_DIR%"
-if errorlevel 1 (
+set "STEP3_EXIT=%ERRORLEVEL%"
+
+if %STEP3_EXIT% NEQ 0 (
     echo.
-    echo WARNING: GGUF Triton patch installation had errors
+    echo WARNING: GGUF Triton patch installation reported errors
     echo You may need to run it manually later
-    timeout /t 5 /nobreak >nul 2>&1
+    timeout /t 3 /nobreak >nul 2>&1
 )
 
 REM ============================================

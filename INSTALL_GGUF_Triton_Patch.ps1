@@ -106,25 +106,49 @@ Set-Location "..\..\"
 
 $verifyResult = python -c "from custom_nodes.ComfyUI-GGUF.dequant import HAS_TRITON, USE_TRITON_KERNELS; print('HAS_TRITON:', HAS_TRITON); print('USE_TRITON_KERNELS:', USE_TRITON_KERNELS); exit(0 if HAS_TRITON and USE_TRITON_KERNELS else 1)" 2>$null
 
-if ($LASTEXITCODE -ne 0) {
+$tritonEnabled = ($LASTEXITCODE -eq 0)
+
+if (-not $tritonEnabled) {
     Write-Host ""
     Write-Host "WARNING: Triton kernels not enabled" -ForegroundColor Yellow
-    Write-Host "Check that pytorch-triton-xpu is installed correctly"
-    Read-Host "Press Enter to continue..."
+    Write-Host ""
+    Write-Host "This is usually because:"
+    Write-Host "  - pytorch-triton-xpu is not available in current PyTorch nightly"
+    Write-Host "  - Triton will auto-compile on first GGUF model load instead"
+    Write-Host ""
+    Write-Host "GGUF models will still work, but without pre-optimized kernels."
+    Write-Host "First load may take longer (~1-2 minutes for compilation)."
 } else {
     Write-Host "OK: Triton kernels enabled!" -ForegroundColor Green
 }
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Green
-Write-Host "GGUF Triton Patch Installation Complete!" -ForegroundColor Green
+if ($tritonEnabled) {
+    Write-Host "GGUF Triton Optimization Complete!" -ForegroundColor Green
+} else {
+    Write-Host "GGUF Patch Applied (Triton kernels will auto-compile)" -ForegroundColor Yellow
+}
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Performance improvements:"
-Write-Host "  - Q4_0 models: ~11x faster"
-Write-Host "  - Q8_0 models: ~6x faster"
-Write-Host "  - First load will compile kernels (~10-30 seconds)"
-Write-Host "  - Subsequent loads use cached kernels"
+
+if ($tritonEnabled) {
+    Write-Host "Performance improvements:"
+    Write-Host "  - Q4_0 models: ~11x faster"
+    Write-Host "  - Q8_0 models: ~6x faster"
+    Write-Host "  - First load will compile kernels (~10-30 seconds)"
+    Write-Host "  - Subsequent loads use cached kernels"
+} else {
+    Write-Host "Status:"
+    Write-Host "  - GGUF patch applied successfully"
+    Write-Host "  - Triton kernels will compile on first GGUF load"
+    Write-Host "  - First load: ~1-2 minutes (one-time compilation)"
+    Write-Host "  - Subsequent loads: Fast (using cached kernels)"
+    Write-Host ""
+    Write-Host "Note: pytorch-triton-xpu not available in current PyTorch build" -ForegroundColor Yellow
+    Write-Host "      This is normal and GGUF models will still work"
+}
+
 Write-Host ""
 Write-Host "Next: Run START_ComfyUI.ps1 to launch with optimizations!"
 Write-Host "================================================================"

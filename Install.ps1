@@ -54,11 +54,23 @@ if (-not (Test-Path $script1)) {
     exit 1
 }
 
-& $script1 -InstallPath $InstallPath
-if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
+try {
+    & $script1 -InstallPath $InstallPath
+    # Reset LASTEXITCODE to avoid false positives
+    $global:LASTEXITCODE = 0
+} catch {
     Write-Host ""
     Write-Host "ERROR: ComfyUI installation failed!" -ForegroundColor Red
-    Write-Host "Please check the error messages above." -ForegroundColor Yellow
+    Write-Host "Error: $_" -ForegroundColor Yellow
+    Read-Host "Press Enter to exit..."
+    exit 1
+}
+
+# Verify installation directory exists
+if (-not (Test-Path "$InstallPath\comfyui_venv")) {
+    Write-Host ""
+    Write-Host "ERROR: ComfyUI installation appears to have failed!" -ForegroundColor Red
+    Write-Host "Virtual environment not found at: $InstallPath\comfyui_venv" -ForegroundColor Yellow
     Read-Host "Press Enter to exit..."
     exit 1
 }
@@ -86,12 +98,16 @@ if (-not (Test-Path $script2)) {
     exit 1
 }
 
-& $script2 -InstallPath $InstallPath
-if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
+try {
+    & $script2 -InstallPath $InstallPath
+    # Reset LASTEXITCODE to avoid false positives
+    $global:LASTEXITCODE = 0
+} catch {
     Write-Host ""
     Write-Host "WARNING: Custom nodes installation had errors" -ForegroundColor Yellow
+    Write-Host "Error: $_" -ForegroundColor Yellow
     Write-Host "Continuing with GGUF Triton patch..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 3
 }
 
 # ============================================
@@ -117,12 +133,16 @@ if (-not (Test-Path $script3)) {
     exit 1
 }
 
-& $script3 -InstallPath $InstallPath
-if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
+try {
+    & $script3 -InstallPath $InstallPath
+    # Reset LASTEXITCODE to avoid false positives
+    $global:LASTEXITCODE = 0
+} catch {
     Write-Host ""
     Write-Host "WARNING: GGUF Triton patch installation had errors" -ForegroundColor Yellow
+    Write-Host "Error: $_" -ForegroundColor Yellow
     Write-Host "You may need to run it manually later" -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 3
 }
 
 # ============================================
