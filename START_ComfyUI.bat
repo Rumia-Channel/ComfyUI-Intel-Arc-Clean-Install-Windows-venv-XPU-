@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion EnableExtensions
 title ComfyUI - Intel Arc XPU with Triton Optimization
 
 REM ============================================
@@ -44,14 +45,46 @@ echo.
 REM ============================================
 REM Launch ComfyUI
 REM ============================================
+if not exist "C:\ComfyUI" (
+    echo ERROR: ComfyUI directory not found!
+    echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
+    pause
+    goto :error
+)
+
 cd /d C:\ComfyUI
-call comfyui_venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo ERROR: Failed to change to ComfyUI directory
+    pause
+    goto :error
+)
+
+if not exist "comfyui_venv\Scripts\activate.bat" (
+    echo ERROR: Virtual environment not found!
+    echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
+    pause
+    goto :error
+)
+
+call "comfyui_venv\Scripts\activate.bat"
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment
+    pause
+    goto :error
+)
 
 echo [INFO] Starting ComfyUI...
 echo [INFO] GGUF Triton optimization: Active
 echo [INFO] First GGUF load will compile kernels (~10-30 sec)
 echo [INFO] Access UI: http://127.0.0.1:8188
 echo.
+
+if not exist "main.py" (
+    echo ERROR: main.py not found!
+    echo ComfyUI may not be properly installed.
+    pause
+    goto :error
+)
 
 python main.py ^
 --lowvram ^
@@ -62,4 +95,26 @@ python main.py ^
 --output-directory "%USERPROFILE%\Documents\AI-Playground\media" ^
 --front-end-version "Comfy-Org/ComfyUI_frontend@latest"
 
+if errorlevel 1 (
+    echo.
+    echo ComfyUI exited with an error
+    pause
+    goto :error
+)
+
 pause
+endlocal
+exit /b 0
+
+:error
+echo.
+echo ================================================================
+echo Failed to Start ComfyUI!
+echo ================================================================
+echo.
+echo Please review the error messages above.
+echo Make sure you have completed the installation steps.
+echo.
+pause
+endlocal
+exit /b 1

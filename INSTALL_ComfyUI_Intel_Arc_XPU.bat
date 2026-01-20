@@ -1,6 +1,9 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal EnableDelayedExpansion EnableExtensions
 title ComfyUI Intel Arc XPU - Advanced Installation v2.0
+
+REM Set error handling
+set "ERROR_OCCURRED=0"
 
 echo ================================================================
 echo ComfyUI Intel Arc XPU Installer v2.0
@@ -39,7 +42,7 @@ if errorlevel 1 (
     echo.
     echo Make sure to check "Add Python to PATH" during installation
     pause
-    exit /b 1
+    goto :error
 )
 
 REM Get Python version
@@ -53,7 +56,7 @@ if errorlevel 1 (
     echo.
     echo Continue anyway? (Y/N)
     choice /C YN /N
-    if errorlevel 2 exit /b 1
+    if errorlevel 2 goto :error
 )
 
 REM Check Git
@@ -64,7 +67,7 @@ if errorlevel 1 (
     echo Download Git for Windows:
     echo https://git-scm.com/download/win
     pause
-    exit /b 1
+    goto :error
 )
 
 echo OK: Python %PYTHON_VER% and Git found
@@ -88,7 +91,7 @@ if errorlevel 1 (
     echo.
     echo Continue with CPU-only mode? (Y/N)
     choice /C YN /N
-    if errorlevel 2 exit /b 1
+    if errorlevel 2 goto :error
 ) else (
     echo Detected Intel GPU:
     wmic path win32_VideoController get name | findstr /i "Arc Iris Xe Intel(R) UHD"
@@ -136,7 +139,7 @@ if "%MSVC_FOUND%"=="0" (
     echo.
     echo Continue without Triton? (ComfyUI will still work)
     choice /C YN /N
-    if errorlevel 2 exit /b 1
+    if errorlevel 2 goto :error
 ) else (
     echo OK: Visual Studio Build Tools found
     echo Path: %VCVARS_PATH%
@@ -185,14 +188,31 @@ if exist "C:\ComfyUI" (
     )
 ) else (
     echo Cloning ComfyUI repository...
-    git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git C:\ComfyUI
-    if errorlevel 1 (
-        echo ERROR: Failed to clone ComfyUI
+    set "CLONE_SUCCESS=0"
+    for /L %%i in (1,1,3) do (
+        if "!CLONE_SUCCESS!"=="0" (
+            echo Attempt %%i of 3...
+            git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git C:\ComfyUI
+            if not errorlevel 1 set "CLONE_SUCCESS=1"
+            if "!CLONE_SUCCESS!"=="0" (
+                if exist "C:\ComfyUI" rmdir /s /q "C:\ComfyUI" 2>nul
+                echo Retrying in 5 seconds...
+                timeout /t 5 /nobreak >nul 2>&1
+            )
+        )
+    )
+    if "!CLONE_SUCCESS!"=="0" (
+        echo ERROR: Failed to clone ComfyUI after 3 attempts
         echo Check your internet connection and try again
         pause
-        exit /b 1
+        goto :error
     )
     cd /d C:\ComfyUI
+    if errorlevel 1 (
+        echo ERROR: Failed to change to ComfyUI directory
+        pause
+        goto :error
+    )
 )
 
 echo OK: ComfyUI repository ready
@@ -226,11 +246,28 @@ if exist "comfyui_venv" (
     )
 )
 
-call comfyui_venv\Scripts\activate.bat
+echo Activating virtual environment...
+if not exist "comfyui_venv\Scripts\activate.bat" (
+    echo ERROR: Virtual environment activation script not found!
+    echo Path: %CD%\comfyui_venv\Scripts\activate.bat
+    pause
+    goto :error
+)
+
+call "comfyui_venv\Scripts\activate.bat"
 if errorlevel 1 (
     echo ERROR: Failed to activate virtual environment
+    echo Try running as Administrator
     pause
-    exit /b 1
+    goto :error
+)
+
+REM Verify activation
+where python >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Python not found after venv activation
+    pause
+    goto :error
 )
 
 echo OK: Virtual environment activated
@@ -251,17 +288,34 @@ pip uninstall -y torch torchvision torchaudio intel-extension-for-pytorch
 echo.
 echo Installing PyTorch XPU Nightly (2.11+)...
 echo This may take 5-10 minutes...
-pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu
 
-if errorlevel 1 (
-    echo ERROR: PyTorch installation failed!
+set "PYTORCH_SUCCESS=0"
+for /L %%i in (1,1,2) do (
+    if "!PYTORCH_SUCCESS!"=="0" (
+        echo Installation attempt %%i of 2...
+        pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu
+        if not errorlevel 1 (
+            python -c "import torch" 2>nul
+            if not errorlevel 1 set "PYTORCH_SUCCESS=1"
+        )
+        if "!PYTORCH_SUCCESS!"=="0" (
+            if %%i LSS 2 (
+                echo Retrying in 10 seconds...
+                timeout /t 10 /nobreak >nul 2>&1
+            )
+        )
+    )
+)
+
+if "!PYTORCH_SUCCESS!"=="0" (
+    echo ERROR: PyTorch installation failed after 2 attempts!
     echo.
     echo Try:
     echo   1. Check internet connection
     echo   2. Run as Administrator
     echo   3. Disable antivirus temporarily
     pause
-    exit /b 1
+    goto :error
 )
 
 echo.
@@ -354,3 +408,24 @@ echo - Update Intel Graphics drivers regularly
 echo - Keep Windows power plan on "High Performance"
 echo.
 pause
+endlocal
+exit /b 0
+
+:error
+echo.
+echo ================================================================
+echo Installation Failed!
+echo ================================================================
+echo.
+echo An error occurred during installation.
+echo Please review the error messages above.
+echo.
+echo Common solutions:
+echo   1. Run this script as Administrator
+echo   2. Check your internet connection
+echo   3. Temporarily disable antivirus software
+echo   4. Ensure you have enough disk space (~8GB)
+echo.
+pause
+endlocal
+exit /b 1

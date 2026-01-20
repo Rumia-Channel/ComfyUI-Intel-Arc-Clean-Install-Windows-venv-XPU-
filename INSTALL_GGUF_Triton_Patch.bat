@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion EnableExtensions
 title Installing GGUF Triton Patch
 
 echo ================================================================
@@ -12,8 +13,33 @@ echo   - Q8_0: ~6x faster dequantization
 echo.
 pause
 
+if not exist "C:\ComfyUI" (
+    echo ERROR: ComfyUI directory not found!
+    echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
+    pause
+    goto :error
+)
+
 cd /d C:\ComfyUI
-call comfyui_venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo ERROR: Failed to change to ComfyUI directory
+    pause
+    goto :error
+)
+
+if not exist "comfyui_venv\Scripts\activate.bat" (
+    echo ERROR: Virtual environment not found!
+    echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
+    pause
+    goto :error
+)
+
+call "comfyui_venv\Scripts\activate.bat"
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment
+    pause
+    goto :error
+)
 
 REM ============================================
 REM Check if GGUF node exists
@@ -25,7 +51,7 @@ if not exist "custom_nodes\ComfyUI-GGUF" (
     echo ERROR: ComfyUI-GGUF not found!
     echo Run INSTALL_Custom_Nodes.bat first.
     pause
-    exit /b 1
+    goto :error
 )
 
 echo OK: ComfyUI-GGUF found
@@ -40,14 +66,23 @@ powershell -Command "& {Invoke-WebRequest -Uri 'https://raw.githubusercontent.co
 
 if not exist "comfyui_gguf_xpu.patch" (
     echo WARNING: Could not download patch automatically
-    echo.
-    echo Please download manually:
-    echo https://github.com/ai-joe-git/ComfyUI-Intel-Arc-Clean-Install-Windows-venv-XPU-/blob/main/patches/comfyui_gguf_xpu.patch
-    echo.
-    echo Place it in: C:\ComfyUI\comfyui_gguf_xpu.patch
-    echo Then run this script again.
-    pause
-    exit /b 1
+    echo Retrying with alternative method...
+
+    REM Retry with curl if available
+    curl -L -o comfyui_gguf_xpu.patch "https://raw.githubusercontent.com/ai-joe-git/ComfyUI-Intel-Arc-Clean-Install-Windows-venv-XPU-/main/patches/comfyui_gguf_xpu.patch" 2>nul
+
+    if not exist "comfyui_gguf_xpu.patch" (
+        echo.
+        echo ERROR: Could not download patch automatically
+        echo.
+        echo Please download manually:
+        echo https://github.com/ai-joe-git/ComfyUI-Intel-Arc-Clean-Install-Windows-venv-XPU-/blob/main/patches/comfyui_gguf_xpu.patch
+        echo.
+        echo Place it in: C:\ComfyUI\comfyui_gguf_xpu.patch
+        echo Then run this script again.
+        pause
+        goto :error
+    )
 )
 
 echo OK: Patch file downloaded
@@ -79,7 +114,7 @@ if errorlevel 1 (
         echo ERROR: Triton code not found in dequant.py
         echo Manual patch may be required
         pause
-        exit /b 1
+        goto :error
     )
 )
 
@@ -118,3 +153,18 @@ echo.
 echo Next: Run START_ComfyUI.bat to launch with optimizations!
 echo ================================================================
 pause
+endlocal
+exit /b 0
+
+:error
+echo.
+echo ================================================================
+echo GGUF Triton Patch Installation Failed!
+echo ================================================================
+echo.
+echo Please review the error messages above.
+echo Make sure you have run the previous installation scripts.
+echo.
+pause
+endlocal
+exit /b 1

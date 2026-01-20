@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion EnableExtensions
 title Repair/Update PyTorch XPU Nightly
 
 echo ================================================================
@@ -15,15 +16,39 @@ echo WARNING: This will uninstall all current PyTorch versions!
 echo.
 pause
 
+if not exist "C:\ComfyUI" (
+    echo ERROR: ComfyUI directory not found!
+    echo Run INSTALL_ComfyUI_Intel_Arc_XPU.bat first.
+    pause
+    goto :error
+)
+
 cd /d C:\ComfyUI
+if errorlevel 1 (
+    echo ERROR: Failed to change to ComfyUI directory
+    pause
+    goto :error
+)
+
 if not exist "comfyui_venv" (
     echo ERROR: Virtual environment not found!
     echo Run INSTALL_ComfyUI_Intel_Arc_XPU.bat first.
     pause
-    exit /b 1
+    goto :error
 )
 
-call comfyui_venv\Scripts\activate.bat
+if not exist "comfyui_venv\Scripts\activate.bat" (
+    echo ERROR: Virtual environment activation script not found!
+    pause
+    goto :error
+)
+
+call "comfyui_venv\Scripts\activate.bat"
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment
+    pause
+    goto :error
+)
 
 REM ============================================
 REM Step 1: Remove ALL PyTorch packages
@@ -66,11 +91,27 @@ echo [4/5] Installing PyTorch XPU Nightly (latest)...
 echo This may take 5-10 minutes depending on your connection...
 echo.
 
-pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu
+set "PYTORCH_SUCCESS=0"
+for /L %%i in (1,1,2) do (
+    if "!PYTORCH_SUCCESS!"=="0" (
+        echo Installation attempt %%i of 2...
+        pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu
+        if not errorlevel 1 (
+            python -c "import torch" 2>nul
+            if not errorlevel 1 set "PYTORCH_SUCCESS=1"
+        )
+        if "!PYTORCH_SUCCESS!"=="0" (
+            if %%i LSS 2 (
+                echo Retrying in 10 seconds...
+                timeout /t 10 /nobreak >nul 2>&1
+            )
+        )
+    )
+)
 
-if errorlevel 1 (
+if "!PYTORCH_SUCCESS!"=="0" (
     echo.
-    echo ERROR: PyTorch installation failed!
+    echo ERROR: PyTorch installation failed after 2 attempts!
     echo.
     echo Troubleshooting:
     echo   1. Check your internet connection
@@ -78,7 +119,7 @@ if errorlevel 1 (
     echo   3. Visit: https://download.pytorch.org/whl/nightly/xpu/
     echo.
     pause
-    exit /b 1
+    goto :error
 )
 
 echo.
@@ -146,3 +187,23 @@ if errorlevel 1 (
     echo.
     pause
 )
+
+endlocal
+exit /b 0
+
+:error
+echo.
+echo ================================================================
+echo PyTorch XPU Repair Failed!
+echo ================================================================
+echo.
+echo Please review the error messages above.
+echo.
+echo Common solutions:
+echo   1. Check your internet connection
+echo   2. Run as Administrator
+echo   3. Ensure C:\ComfyUI exists and was set up correctly
+echo.
+pause
+endlocal
+exit /b 1

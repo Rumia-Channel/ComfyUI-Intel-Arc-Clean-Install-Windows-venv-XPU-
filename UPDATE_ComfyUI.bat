@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion EnableExtensions
 title Updating ComfyUI
 
 echo ================================================================
@@ -14,8 +15,33 @@ echo   - Python dependencies
 echo.
 pause
 
+if not exist "C:\ComfyUI" (
+    echo ERROR: ComfyUI directory not found!
+    echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
+    pause
+    goto :error
+)
+
 cd /d C:\ComfyUI
-call comfyui_venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo ERROR: Failed to change to ComfyUI directory
+    pause
+    goto :error
+)
+
+if not exist "comfyui_venv\Scripts\activate.bat" (
+    echo ERROR: Virtual environment not found!
+    echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
+    pause
+    goto :error
+)
+
+call "comfyui_venv\Scripts\activate.bat"
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment
+    pause
+    goto :error
+)
 
 echo.
 echo [1/5] Updating ComfyUI core...
@@ -39,18 +65,32 @@ pip install -r requirements.txt
 
 echo.
 echo [5/5] Updating custom nodes...
-cd custom_nodes
-for /d %%i in (*) do (
-    if exist "%%i\.git" (
-        echo Updating %%i...
-        cd %%i
-        git pull
-        if exist "requirements.txt" pip install -r requirements.txt
+if exist "custom_nodes" (
+    cd custom_nodes
+    if errorlevel 1 (
+        echo WARNING: Failed to enter custom_nodes directory
+    ) else (
+        for /d %%i in (*) do (
+            if exist "%%i\.git" (
+                echo Updating %%i...
+                cd "%%i"
+                if not errorlevel 1 (
+                    git pull
+                    if exist "requirements.txt" (
+                        echo Installing requirements for %%i...
+                        pip install -r requirements.txt
+                    )
+                    cd ..
+                ) else (
+                    echo WARNING: Failed to enter %%i directory
+                )
+            )
+        )
         cd ..
     )
+) else (
+    echo No custom nodes directory found, skipping...
 )
-
-cd ..
 
 echo.
 echo ================================================================
@@ -63,3 +103,18 @@ echo.
 echo Run START_ComfyUI.bat to launch
 echo ================================================================
 pause
+endlocal
+exit /b 0
+
+:error
+echo.
+echo ================================================================
+echo Update Failed!
+echo ================================================================
+echo.
+echo Please review the error messages above.
+echo Make sure ComfyUI is properly installed first.
+echo.
+pause
+endlocal
+exit /b 1
