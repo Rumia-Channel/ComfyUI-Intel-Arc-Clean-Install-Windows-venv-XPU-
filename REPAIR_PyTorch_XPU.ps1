@@ -1,8 +1,19 @@
+param(
+    [string]$InstallPath = "$InstallPath"
+)
+
+# Remove trailing backslash if present
+if ($InstallPath.EndsWith('\')) {
+    $InstallPath = $InstallPath.TrimEnd('\')
+}
+
 $Host.UI.RawUI.WindowTitle = "Repair/Update PyTorch XPU Nightly"
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "PyTorch XPU Nightly - Repair/Update Tool" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Installation directory: $InstallPath" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "This script will:"
 Write-Host "  1. Remove ALL existing PyTorch packages"
@@ -12,9 +23,13 @@ Write-Host "  4. Verify XPU device detection"
 Write-Host ""
 Write-Host "WARNING: This will uninstall all current PyTorch versions!" -ForegroundColor Yellow
 Write-Host ""
+Write-Host "Usage: .\REPAIR_PyTorch_XPU.ps1 [-InstallPath <path>]"
+Write-Host "  Default: $InstallPath"
+Write-Host "  Example: .\REPAIR_PyTorch_XPU.ps1 -InstallPath D:\AI\ComfyUI"
+Write-Host ""
 Read-Host "Press Enter to continue..."
 
-Set-Location "C:\ComfyUI"
+Set-Location "$InstallPath"
 if (-not (Test-Path "comfyui_venv")) {
     Write-Host "ERROR: Virtual environment not found!" -ForegroundColor Red
     Write-Host "Run INSTALL_ComfyUI_Intel_Arc_XPU.ps1 first."

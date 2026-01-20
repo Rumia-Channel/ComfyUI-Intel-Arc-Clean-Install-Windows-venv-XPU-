@@ -2,6 +2,15 @@
 setlocal EnableDelayedExpansion EnableExtensions
 title ComfyUI Intel Arc XPU - Advanced Installation v2.0
 
+REM ============================================
+REM Parse command line arguments
+REM ============================================
+set "INSTALL_DIR=%~1"
+if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%INSTALL_DIR%"
+
+REM Remove trailing backslash if present
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
 REM Set error handling
 set "ERROR_OCCURRED=0"
 
@@ -20,9 +29,13 @@ echo   - Python venv (lighter than conda)
 echo   - Visual Studio Build Tools verification
 echo   - Intel XPU environment optimization
 echo.
-echo Installation directory: C:\ComfyUI
+echo Installation directory: %INSTALL_DIR%
 echo Estimated time: 10-15 minutes
 echo Disk space required: ~8GB
+echo.
+echo Usage: %~nx0 [install_path]
+echo   Default: %INSTALL_DIR%
+echo   Example: %~nx0 D:\AI\ComfyUI
 echo.
 pause
 
@@ -151,9 +164,9 @@ REM ============================================
 echo.
 echo [4/9] Setting up ComfyUI repository...
 
-if exist "C:\ComfyUI" (
+if exist "%INSTALL_DIR%" (
     echo.
-    echo ComfyUI directory already exists: C:\ComfyUI
+    echo ComfyUI directory already exists: %INSTALL_DIR%
     echo.
     echo Options:
     echo   [U] Update existing installation (keeps models/workflows)
@@ -164,7 +177,7 @@ if exist "C:\ComfyUI" (
     
     if errorlevel 3 (
         echo Skipping ComfyUI clone...
-        cd /d C:\ComfyUI
+        cd /d %INSTALL_DIR%
     )
     if errorlevel 2 if not errorlevel 3 (
         echo Backing up models and custom_nodes...
@@ -172,17 +185,17 @@ if exist "C:\ComfyUI" (
         if exist "custom_nodes" move custom_nodes custom_nodes_backup >nul 2>&1
         
         echo Removing old ComfyUI...
-        rmdir /s /q "C:\ComfyUI"
+        rmdir /s /q "%INSTALL_DIR%"
         
         echo Cloning fresh ComfyUI...
-        git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git C:\ComfyUI
+        git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git %INSTALL_DIR%
         
-        cd /d C:\ComfyUI
+        cd /d %INSTALL_DIR%
         if exist "..\models_backup" move ..\models_backup models >nul 2>&1
         if exist "..\custom_nodes_backup" move ..\custom_nodes_backup custom_nodes >nul 2>&1
     )
     if errorlevel 1 if not errorlevel 2 (
-        cd /d C:\ComfyUI
+        cd /d %INSTALL_DIR%
         echo Updating ComfyUI...
         git pull
     )
@@ -192,10 +205,10 @@ if exist "C:\ComfyUI" (
     for /L %%i in (1,1,3) do (
         if "!CLONE_SUCCESS!"=="0" (
             echo Attempt %%i of 3...
-            git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git C:\ComfyUI
+            git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git %INSTALL_DIR%
             if not errorlevel 1 set "CLONE_SUCCESS=1"
             if "!CLONE_SUCCESS!"=="0" (
-                if exist "C:\ComfyUI" rmdir /s /q "C:\ComfyUI" 2>nul
+                if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%" 2>nul
                 echo Retrying in 5 seconds...
                 timeout /t 5 /nobreak >nul 2>&1
             )
@@ -207,7 +220,7 @@ if exist "C:\ComfyUI" (
         pause
         goto :error
     )
-    cd /d C:\ComfyUI
+    cd /d %INSTALL_DIR%
     if errorlevel 1 (
         echo ERROR: Failed to change to ComfyUI directory
         pause
@@ -393,10 +406,10 @@ echo ================================================================
 echo.
 echo   1. INSTALL_Custom_Nodes.bat    - Install essential custom nodes
 echo   2. INSTALL_GGUF_Triton_Patch.bat - Enable GGUF acceleration
-echo   3. Copy models to: C:\ComfyUI\models\checkpoints\
+echo   3. Copy models to: %INSTALL_DIR%\models\checkpoints\
 echo   4. START_ComfyUI.bat            - Launch ComfyUI
 echo.
-echo Installation directory: C:\ComfyUI
+echo Installation directory: %INSTALL_DIR%
 echo.
 echo ================================================================
 echo Performance Tips:

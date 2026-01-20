@@ -1,8 +1,19 @@
+param(
+    [string]$InstallPath = "$InstallPath"
+)
+
+# Remove trailing backslash if present
+if ($InstallPath.EndsWith('\')) {
+    $InstallPath = $InstallPath.TrimEnd('\')
+}
+
 $Host.UI.RawUI.WindowTitle = "Installing ComfyUI Custom Nodes"
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "ComfyUI Custom Nodes Installer" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Installation directory: $InstallPath" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "This will install essential custom nodes:"
 Write-Host "  - ComfyUI-Manager (node management)"
@@ -11,10 +22,14 @@ Write-Host "  - ComfyUI-VideoHelperSuite (video tools)"
 Write-Host "  - ComfyUI-Impact-Pack (utilities)"
 Write-Host "  - rgthree-comfy (workflow tools)"
 Write-Host ""
+Write-Host "Usage: .\INSTALL_Custom_Nodes.ps1 [-InstallPath <path>]"
+Write-Host "  Default: $InstallPath"
+Write-Host "  Example: .\INSTALL_Custom_Nodes.ps1 -InstallPath D:\AI\ComfyUI"
+Write-Host ""
 Read-Host "Press Enter to continue..."
 
-Set-Location "C:\ComfyUI\custom_nodes"
-& "C:\ComfyUI\comfyui_venv\Scripts\Activate.ps1"
+Set-Location "$InstallPath\custom_nodes"
+& "$InstallPath\comfyui_venv\Scripts\Activate.ps1"
 
 Write-Host ""
 Write-Host "[1/5] Installing ComfyUI-Manager..." -ForegroundColor Yellow

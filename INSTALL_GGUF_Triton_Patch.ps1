@@ -1,17 +1,32 @@
+param(
+    [string]$InstallPath = "$InstallPath"
+)
+
+# Remove trailing backslash if present
+if ($InstallPath.EndsWith('\')) {
+    $InstallPath = $InstallPath.TrimEnd('\')
+}
+
 $Host.UI.RawUI.WindowTitle = "Installing GGUF Triton Patch"
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "GGUF Triton Optimization Patch Installer" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "Installation directory: $InstallPath" -ForegroundColor Yellow
+Write-Host ""
 Write-Host "This will apply Triton acceleration to GGUF models:"
 Write-Host "  - Q4_0: ~11x faster dequantization"
 Write-Host "  - Q4_1: ~8x faster dequantization"
 Write-Host "  - Q8_0: ~6x faster dequantization"
 Write-Host ""
+Write-Host "Usage: .\INSTALL_GGUF_Triton_Patch.ps1 [-InstallPath <path>]"
+Write-Host "  Default: $InstallPath"
+Write-Host "  Example: .\INSTALL_GGUF_Triton_Patch.ps1 -InstallPath D:\AI\ComfyUI"
+Write-Host ""
 Read-Host "Press Enter to continue..."
 
-Set-Location "C:\ComfyUI"
+Set-Location "$InstallPath"
 & ".\comfyui_venv\Scripts\Activate.ps1"
 
 # ============================================
@@ -44,7 +59,7 @@ try {
     Write-Host "Please download manually:"
     Write-Host "https://github.com/ai-joe-git/ComfyUI-Intel-Arc-Clean-Install-Windows-venv-XPU-/blob/main/patches/comfyui_gguf_xpu.patch"
     Write-Host ""
-    Write-Host "Place it in: C:\ComfyUI\comfyui_gguf_xpu.patch"
+    Write-Host "Place it in: $InstallPath\comfyui_gguf_xpu.patch"
     Write-Host "Then run this script again."
     Read-Host "Press Enter to exit..."
     exit 1

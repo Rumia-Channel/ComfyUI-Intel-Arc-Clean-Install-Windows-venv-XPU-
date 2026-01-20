@@ -1,3 +1,12 @@
+param(
+    [string]$InstallPath = "$InstallPath"
+)
+
+# Remove trailing backslash if present
+if ($InstallPath.EndsWith('\')) {
+    $InstallPath = $InstallPath.TrimEnd('\')
+}
+
 $Host.UI.RawUI.WindowTitle = "ComfyUI Intel Arc XPU - Advanced Installation v2.0"
 
 Write-Host "================================================================" -ForegroundColor Cyan
@@ -15,9 +24,13 @@ Write-Host "  - Python venv (lighter than conda)"
 Write-Host "  - Visual Studio Build Tools verification"
 Write-Host "  - Intel XPU environment optimization"
 Write-Host ""
-Write-Host "Installation directory: C:\ComfyUI"
+Write-Host "Installation directory: $InstallPath" -ForegroundColor Yellow
 Write-Host "Estimated time: 10-15 minutes"
 Write-Host "Disk space required: ~8GB"
+Write-Host ""
+Write-Host "Usage: .\INSTALL_ComfyUI_Intel_Arc_XPU.ps1 [-InstallPath <path>]"
+Write-Host "  Default: $InstallPath"
+Write-Host "  Example: .\INSTALL_ComfyUI_Intel_Arc_XPU.ps1 -InstallPath D:\AI\ComfyUI"
 Write-Host ""
 Read-Host "Press Enter to continue..."
 
@@ -143,9 +156,9 @@ if (-not $vcvarsPath) {
 Write-Host ""
 Write-Host "[4/9] Setting up ComfyUI repository..." -ForegroundColor Yellow
 
-if (Test-Path "C:\ComfyUI") {
+if (Test-Path "$InstallPath") {
     Write-Host ""
-    Write-Host "ComfyUI directory already exists: C:\ComfyUI"
+    Write-Host "ComfyUI directory already exists: $InstallPath"
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  [U] Update existing installation (keeps models/workflows)"
@@ -157,52 +170,52 @@ if (Test-Path "C:\ComfyUI") {
     switch ($choice.ToUpper()) {
         'S' {
             Write-Host "Skipping ComfyUI clone..."
-            Set-Location "C:\ComfyUI"
+            Set-Location "$InstallPath"
         }
         'F' {
             Write-Host "Backing up models and custom_nodes..."
-            if (Test-Path "C:\ComfyUI\models") {
-                Move-Item "C:\ComfyUI\models" "C:\ComfyUI_models_backup" -Force -ErrorAction SilentlyContinue
+            if (Test-Path "$InstallPath\models") {
+                Move-Item "$InstallPath\models" "$InstallPath_models_backup" -Force -ErrorAction SilentlyContinue
             }
-            if (Test-Path "C:\ComfyUI\custom_nodes") {
-                Move-Item "C:\ComfyUI\custom_nodes" "C:\ComfyUI_custom_nodes_backup" -Force -ErrorAction SilentlyContinue
+            if (Test-Path "$InstallPath\custom_nodes") {
+                Move-Item "$InstallPath\custom_nodes" "$InstallPath_custom_nodes_backup" -Force -ErrorAction SilentlyContinue
             }
 
             Write-Host "Removing old ComfyUI..."
-            Remove-Item "C:\ComfyUI" -Recurse -Force
+            Remove-Item "$InstallPath" -Recurse -Force
 
             Write-Host "Cloning fresh ComfyUI..."
-            git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git C:\ComfyUI
+            git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git $InstallPath
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "ERROR: Failed to clone ComfyUI" -ForegroundColor Red
                 Read-Host "Press Enter to exit..."
                 exit 1
             }
 
-            Set-Location "C:\ComfyUI"
-            if (Test-Path "C:\ComfyUI_models_backup") {
-                Move-Item "C:\ComfyUI_models_backup" "models" -Force -ErrorAction SilentlyContinue
+            Set-Location "$InstallPath"
+            if (Test-Path "$InstallPath_models_backup") {
+                Move-Item "$InstallPath_models_backup" "models" -Force -ErrorAction SilentlyContinue
             }
-            if (Test-Path "C:\ComfyUI_custom_nodes_backup") {
-                Move-Item "C:\ComfyUI_custom_nodes_backup" "custom_nodes" -Force -ErrorAction SilentlyContinue
+            if (Test-Path "$InstallPath_custom_nodes_backup") {
+                Move-Item "$InstallPath_custom_nodes_backup" "custom_nodes" -Force -ErrorAction SilentlyContinue
             }
         }
         default {
-            Set-Location "C:\ComfyUI"
+            Set-Location "$InstallPath"
             Write-Host "Updating ComfyUI..."
             git pull
         }
     }
 } else {
     Write-Host "Cloning ComfyUI repository..."
-    git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git C:\ComfyUI
+    git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git $InstallPath
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Failed to clone ComfyUI" -ForegroundColor Red
         Write-Host "Check your internet connection and try again"
         Read-Host "Press Enter to exit..."
         exit 1
     }
-    Set-Location "C:\ComfyUI"
+    Set-Location "$InstallPath"
 }
 
 Write-Host "OK: ComfyUI repository ready" -ForegroundColor Green
@@ -351,10 +364,10 @@ Write-Host "================================================================"
 Write-Host ""
 Write-Host "  1. INSTALL_Custom_Nodes.ps1    - Install essential custom nodes"
 Write-Host "  2. INSTALL_GGUF_Triton_Patch.ps1 - Enable GGUF acceleration"
-Write-Host "  3. Copy models to: C:\ComfyUI\models\checkpoints\"
+Write-Host "  3. Copy models to: $InstallPath\models\checkpoints\"
 Write-Host "  4. START_ComfyUI.ps1            - Launch ComfyUI"
 Write-Host ""
-Write-Host "Installation directory: C:\ComfyUI"
+Write-Host "Installation directory: $InstallPath"
 Write-Host ""
 Write-Host "================================================================"
 Write-Host "Performance Tips:"

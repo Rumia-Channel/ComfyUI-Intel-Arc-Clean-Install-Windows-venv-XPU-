@@ -1,3 +1,12 @@
+param(
+    [string]$InstallPath = "$InstallPath"
+)
+
+# Remove trailing backslash if present
+if ($InstallPath.EndsWith('\')) {
+    $InstallPath = $InstallPath.TrimEnd('\')
+}
+
 $Host.UI.RawUI.WindowTitle = "ComfyUI - Intel Arc XPU with Triton Optimization"
 
 # ============================================
@@ -26,6 +35,13 @@ function Import-BatchEnvironment {
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "Initializing ComfyUI with Intel Arc XPU" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Installation directory: $InstallPath" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Usage: .\START_ComfyUI.ps1 [-InstallPath <path>]"
+Write-Host "  Default: $InstallPath"
+Write-Host "  Example: .\START_ComfyUI.ps1 -InstallPath D:\AI\ComfyUI"
+Write-Host ""
 
 $vcvarsPaths = @(
     "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
@@ -55,13 +71,13 @@ if ($vcvarsPath) {
 # Intel XPU Environment Variables
 # ============================================
 $env:SYCL_CACHE_PERSISTENT = "1"
-$env:SYCL_CACHE_DIR = "C:\ComfyUI\sycl_cache"
+$env:SYCL_CACHE_DIR = "$InstallPath\sycl_cache"
 $env:SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS = "1"
 $env:ONEAPI_DEVICE_SELECTOR = "level_zero:gpu"
 $env:SYCL_DEVICE_FILTER = "level_zero:gpu"
 
-if (-not (Test-Path "C:\ComfyUI\sycl_cache")) {
-    New-Item -ItemType Directory -Path "C:\ComfyUI\sycl_cache" -Force | Out-Null
+if (-not (Test-Path "$InstallPath\sycl_cache")) {
+    New-Item -ItemType Directory -Path "$InstallPath\sycl_cache" -Force | Out-Null
 }
 
 Write-Host "[XPU] Intel Arc GPU acceleration enabled" -ForegroundColor Green
@@ -70,7 +86,7 @@ Write-Host ""
 # ============================================
 # Launch ComfyUI
 # ============================================
-Set-Location "C:\ComfyUI"
+Set-Location "$InstallPath"
 & ".\comfyui_venv\Scripts\Activate.ps1"
 
 Write-Host "[INFO] Starting ComfyUI..." -ForegroundColor Cyan

@@ -2,9 +2,20 @@
 setlocal EnableDelayedExpansion EnableExtensions
 title Installing ComfyUI Custom Nodes
 
+REM ============================================
+REM Parse command line arguments
+REM ============================================
+set "INSTALL_DIR=%~1"
+if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%INSTALL_DIR%"
+
+REM Remove trailing backslash if present
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
 echo ================================================================
 echo ComfyUI Custom Nodes Installer
 echo ================================================================
+echo.
+echo Installation directory: %INSTALL_DIR%
 echo.
 echo This will install essential custom nodes:
 echo   - ComfyUI-Manager (node management)
@@ -13,21 +24,25 @@ echo   - ComfyUI-VideoHelperSuite (video tools)
 echo   - ComfyUI-Impact-Pack (utilities)
 echo   - rgthree-comfy (workflow tools)
 echo.
+echo Usage: %~nx0 [install_path]
+echo   Default: %INSTALL_DIR%
+echo   Example: %~nx0 D:\AI\ComfyUI
+echo.
 pause
 
-if not exist "C:\ComfyUI" (
+if not exist "%INSTALL_DIR%" (
     echo ERROR: ComfyUI directory not found!
     echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
     pause
     goto :error
 )
 
-if not exist "C:\ComfyUI\custom_nodes" (
+if not exist "%INSTALL_DIR%\custom_nodes" (
     echo Creating custom_nodes directory...
-    mkdir "C:\ComfyUI\custom_nodes"
+    mkdir "%INSTALL_DIR%\custom_nodes"
 )
 
-cd /d C:\ComfyUI\custom_nodes
+cd /d %INSTALL_DIR%\custom_nodes
 if errorlevel 1 (
     echo ERROR: Failed to change to custom_nodes directory
     pause

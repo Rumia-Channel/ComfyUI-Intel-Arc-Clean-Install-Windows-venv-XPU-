@@ -2,9 +2,20 @@
 setlocal EnableDelayedExpansion EnableExtensions
 title Updating ComfyUI
 
+REM ============================================
+REM Parse command line arguments
+REM ============================================
+set "INSTALL_DIR=%~1"
+if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%INSTALL_DIR%"
+
+REM Remove trailing backslash if present
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
 echo ================================================================
 echo ComfyUI Update Script
 echo ================================================================
+echo.
+echo Installation directory: %INSTALL_DIR%
 echo.
 echo This will update:
 echo   - ComfyUI core
@@ -13,16 +24,20 @@ echo   - Triton XPU
 echo   - Custom nodes
 echo   - Python dependencies
 echo.
+echo Usage: %~nx0 [install_path]
+echo   Default: %INSTALL_DIR%
+echo   Example: %~nx0 D:\AI\ComfyUI
+echo.
 pause
 
-if not exist "C:\ComfyUI" (
+if not exist "%INSTALL_DIR%" (
     echo ERROR: ComfyUI directory not found!
     echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
     pause
     goto :error
 )
 
-cd /d C:\ComfyUI
+cd /d %INSTALL_DIR%
 if errorlevel 1 (
     echo ERROR: Failed to change to ComfyUI directory
     pause

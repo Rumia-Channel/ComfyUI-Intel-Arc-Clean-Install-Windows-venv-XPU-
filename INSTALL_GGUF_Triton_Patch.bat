@@ -2,25 +2,40 @@
 setlocal EnableDelayedExpansion EnableExtensions
 title Installing GGUF Triton Patch
 
+REM ============================================
+REM Parse command line arguments
+REM ============================================
+set "INSTALL_DIR=%~1"
+if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%INSTALL_DIR%"
+
+REM Remove trailing backslash if present
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
 echo ================================================================
 echo GGUF Triton Optimization Patch Installer
 echo ================================================================
+echo.
+echo Installation directory: %INSTALL_DIR%
 echo.
 echo This will apply Triton acceleration to GGUF models:
 echo   - Q4_0: ~11x faster dequantization
 echo   - Q4_1: ~8x faster dequantization
 echo   - Q8_0: ~6x faster dequantization
 echo.
+echo Usage: %~nx0 [install_path]
+echo   Default: %INSTALL_DIR%
+echo   Example: %~nx0 D:\AI\ComfyUI
+echo.
 pause
 
-if not exist "C:\ComfyUI" (
+if not exist "%INSTALL_DIR%" (
     echo ERROR: ComfyUI directory not found!
     echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
     pause
     goto :error
 )
 
-cd /d C:\ComfyUI
+cd /d %INSTALL_DIR%
 if errorlevel 1 (
     echo ERROR: Failed to change to ComfyUI directory
     pause
@@ -78,7 +93,7 @@ if not exist "comfyui_gguf_xpu.patch" (
         echo Please download manually:
         echo https://github.com/ai-joe-git/ComfyUI-Intel-Arc-Clean-Install-Windows-venv-XPU-/blob/main/patches/comfyui_gguf_xpu.patch
         echo.
-        echo Place it in: C:\ComfyUI\comfyui_gguf_xpu.patch
+        echo Place it in: %INSTALL_DIR%\comfyui_gguf_xpu.patch
         echo Then run this script again.
         pause
         goto :error

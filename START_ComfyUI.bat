@@ -3,11 +3,23 @@ setlocal EnableDelayedExpansion EnableExtensions
 title ComfyUI - Intel Arc XPU with Triton Optimization
 
 REM ============================================
+REM Parse command line arguments
+REM ============================================
+set "INSTALL_DIR=%~1"
+if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%INSTALL_DIR%"
+
+REM Remove trailing backslash if present
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
+REM ============================================
 REM Initialize C++ Compiler for Triton
 REM ============================================
 echo ================================================================
 echo Initializing ComfyUI with Intel Arc XPU
 echo ================================================================
+echo.
+echo Installation directory: %INSTALL_DIR%
+echo.
 
 set "MSVC_FOUND=0"
 if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
@@ -32,12 +44,12 @@ REM ============================================
 REM Intel XPU Environment Variables
 REM ============================================
 set SYCL_CACHE_PERSISTENT=1
-set SYCL_CACHE_DIR=C:\ComfyUI\sycl_cache
+set SYCL_CACHE_DIR=%INSTALL_DIR%\sycl_cache
 set SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
 set ONEAPI_DEVICE_SELECTOR=level_zero:gpu
 set SYCL_DEVICE_FILTER=level_zero:gpu
 
-if not exist "C:\ComfyUI\sycl_cache" mkdir "C:\ComfyUI\sycl_cache"
+if not exist "%INSTALL_DIR%\sycl_cache" mkdir "%INSTALL_DIR%\sycl_cache"
 
 echo [XPU] Intel Arc GPU acceleration enabled
 echo.
@@ -45,14 +57,14 @@ echo.
 REM ============================================
 REM Launch ComfyUI
 REM ============================================
-if not exist "C:\ComfyUI" (
+if not exist "%INSTALL_DIR%" (
     echo ERROR: ComfyUI directory not found!
     echo Please run INSTALL_ComfyUI_Intel_Arc_XPU.bat first
     pause
     goto :error
 )
 
-cd /d C:\ComfyUI
+cd /d %INSTALL_DIR%
 if errorlevel 1 (
     echo ERROR: Failed to change to ComfyUI directory
     pause

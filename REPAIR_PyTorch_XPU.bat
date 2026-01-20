@@ -2,9 +2,20 @@
 setlocal EnableDelayedExpansion EnableExtensions
 title Repair/Update PyTorch XPU Nightly
 
+REM ============================================
+REM Parse command line arguments
+REM ============================================
+set "INSTALL_DIR=%~1"
+if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%INSTALL_DIR%"
+
+REM Remove trailing backslash if present
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
 echo ================================================================
 echo PyTorch XPU Nightly - Repair/Update Tool
 echo ================================================================
+echo.
+echo Installation directory: %INSTALL_DIR%
 echo.
 echo This script will:
 echo   1. Remove ALL existing PyTorch packages
@@ -14,16 +25,20 @@ echo   4. Verify XPU device detection
 echo.
 echo WARNING: This will uninstall all current PyTorch versions!
 echo.
+echo Usage: %~nx0 [install_path]
+echo   Default: %INSTALL_DIR%
+echo   Example: %~nx0 D:\AI\ComfyUI
+echo.
 pause
 
-if not exist "C:\ComfyUI" (
+if not exist "%INSTALL_DIR%" (
     echo ERROR: ComfyUI directory not found!
     echo Run INSTALL_ComfyUI_Intel_Arc_XPU.bat first.
     pause
     goto :error
 )
 
-cd /d C:\ComfyUI
+cd /d %INSTALL_DIR%
 if errorlevel 1 (
     echo ERROR: Failed to change to ComfyUI directory
     pause
@@ -202,7 +217,7 @@ echo.
 echo Common solutions:
 echo   1. Check your internet connection
 echo   2. Run as Administrator
-echo   3. Ensure C:\ComfyUI exists and was set up correctly
+echo   3. Ensure %INSTALL_DIR% exists and was set up correctly
 echo.
 pause
 endlocal

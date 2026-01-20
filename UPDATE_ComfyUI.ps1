@@ -1,8 +1,19 @@
+param(
+    [string]$InstallPath = "$InstallPath"
+)
+
+# Remove trailing backslash if present
+if ($InstallPath.EndsWith('\')) {
+    $InstallPath = $InstallPath.TrimEnd('\')
+}
+
 $Host.UI.RawUI.WindowTitle = "Updating ComfyUI"
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "ComfyUI Update Script" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Installation directory: $InstallPath" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "This will update:"
 Write-Host "  - ComfyUI core"
@@ -11,9 +22,13 @@ Write-Host "  - Triton XPU"
 Write-Host "  - Custom nodes"
 Write-Host "  - Python dependencies"
 Write-Host ""
+Write-Host "Usage: .\UPDATE_ComfyUI.ps1 [-InstallPath <path>]"
+Write-Host "  Default: $InstallPath"
+Write-Host "  Example: .\UPDATE_ComfyUI.ps1 -InstallPath D:\AI\ComfyUI"
+Write-Host ""
 Read-Host "Press Enter to continue..."
 
-Set-Location "C:\ComfyUI"
+Set-Location "$InstallPath"
 & ".\comfyui_venv\Scripts\Activate.ps1"
 
 Write-Host ""
