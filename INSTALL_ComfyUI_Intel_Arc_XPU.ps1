@@ -279,7 +279,7 @@ pip uninstall -y torch torchvision torchaudio intel-extension-for-pytorch
 Write-Host ""
 Write-Host "Installing PyTorch XPU Nightly (2.11+)..."
 Write-Host "This may take 5-10 minutes..."
-pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu
+pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: PyTorch installation failed!" -ForegroundColor Red

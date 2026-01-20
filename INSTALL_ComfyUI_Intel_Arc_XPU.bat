@@ -306,7 +306,7 @@ set "PYTORCH_SUCCESS=0"
 for /L %%i in (1,1,2) do (
     if "!PYTORCH_SUCCESS!"=="0" (
         echo Installation attempt %%i of 2...
-        pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/xpu
+        pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu
         if not errorlevel 1 (
             python -c "import torch" 2>nul
             if not errorlevel 1 set "PYTORCH_SUCCESS=1"
