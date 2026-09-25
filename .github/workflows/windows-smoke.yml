@@ -1,0 +1,37 @@
+name: Windows installer smoke checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  powershell-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse PowerShell entry points (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $failures = 0
+          Get-ChildItem -Filter '*.ps1' | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            foreach ($errorItem in $errors) {
+              Write-Host ("{0}: {1}" -f $_.Name, $errorItem.Message)
+              $failures++
+            }
+          }
+          if ($failures -ne 0) { exit 1 }
+      - name: Check entry points and safety invariants
+        shell: powershell
+        run: |
+          $core = Get-Content -Raw .\ComfyUI-XPU.ps1
+          foreach ($required in @('whl/xpu', 'whl/nightly/xpu', 'manager_requirements.txt', 'pull', '--ff-only', 'torch.xpu.is_available()', 'ComfyUI-GGUF')) {
+            if (-not $core.Contains($required)) { throw "Missing expected behavior: $required" }
+          }
+          if ($core -match 'Remove-Item|reset --hard|rmdir /s') { throw 'Unexpected destructive installation behavior' }
+          Get-ChildItem -Filter '*.bat' | ForEach-Object {
+            $body = Get-Content -Raw $_.FullName
+            if (-not $body.Contains('ComfyUI-XPU.ps1')) { throw "Batch wrapper does not use shared installer: $($_.Name)" }
+          }
