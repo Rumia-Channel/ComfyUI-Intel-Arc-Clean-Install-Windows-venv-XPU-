@@ -53,10 +53,11 @@ function Update-Checkout {
 }
 
 function Install-PyTorchXpu {
-    param([switch]$Force)
     $index = if ($Nightly) { $NightlyIndex } else { $StableIndex }
     $arguments = @('-m', 'pip', 'install', '--upgrade')
-    if ($Force) { $arguments += '--force-reinstall' }
+    # Even if a newer CPU/nightly wheel is installed, explicitly select an XPU wheel
+    # from the chosen index. Pip --upgrade alone may keep the existing wheel.
+    $arguments += '--force-reinstall'
     if ($Nightly) { $arguments += '--pre' }
     $arguments += @('torch', 'torchvision', 'torchaudio', '--index-url', $index)
     Write-Host "Installing PyTorch XPU from $index"
