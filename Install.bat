@@ -1,8 +1,12 @@
 @echo off
 setlocal
+rem If omitted, Install asks; other commands load .comfyui-install-path via ComfyUI-XPU.ps1.
 set "INSTALL_DIR=%~1"
-if not defined INSTALL_DIR set "INSTALL_DIR=C:\ComfyUI"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0ComfyUI-XPU.ps1" -Mode Install -InstallPath "%INSTALL_DIR%"
+if defined INSTALL_DIR (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0ComfyUI-XPU.ps1" -Mode Install -InstallPath "%INSTALL_DIR%"
+) else (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0ComfyUI-XPU.ps1" -Mode Install
+)
 set "RESULT=%ERRORLEVEL%"
 if not "%RESULT%"=="0" pause
 endlocal & exit /b %RESULT%
