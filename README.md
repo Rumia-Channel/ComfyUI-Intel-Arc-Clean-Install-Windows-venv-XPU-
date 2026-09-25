@@ -1,13 +1,13 @@
 # ComfyUI on Intel Arc / Core Ultra (Windows, venv, PyTorch XPU)
 
-Installer and maintenance scripts for native **PyTorch XPU** on Windows. This fork retains the familiar `.bat` and `.ps1` entry points and routes them through `ComfyUI-XPU.ps1` so both interfaces install the same dependencies.
+Installer and maintenance scripts for native **PyTorch XPU** on Windows using **uv** for Python 3.12, virtual environments, and dependency installation. This fork retains the familiar `.bat` and `.ps1` entry points and routes them through `ComfyUI-XPU.ps1` so both interfaces install the same dependencies.
 
-**Updated installation policy (September 2026):** stable PyTorch XPU by default, optional nightly wheels; official ComfyUI Manager enabled via `manager_requirements.txt` and `--enable-manager`; ComfyUI-GGUF installed without patching upstream files. Installation on specific Intel GPU/driver combinations has **not** been verified by CI or on physical Windows hardware in this change.
+**Updated installation policy (September 2026):** preinstalled uv manages a Python 3.12 virtual environment; stable PyTorch XPU by default, optional nightly wheels; official ComfyUI Manager enabled via `manager_requirements.txt` and `--enable-manager`; ComfyUI-GGUF installed without patching upstream files. Installation on specific Intel GPU/driver combinations has **not** been verified by CI or on physical Windows hardware in this change.
 
 ## Requirements
 
 - Windows 10/11 64-bit and a compatible Intel GPU with a current [Intel graphics driver](https://www.intel.com/content/www/us/en/download/785597/intel-arc-iris-xe-graphics-windows.html).
-- **64-bit Python 3.12 or 3.11** on PATH; [Git for Windows](https://git-scm.com/download/win); PowerShell 5.1+ (included with Windows).
+- **uv already installed and available on PATH** ([installation guide](https://docs.astral.sh/uv/getting-started/installation/)), [Git for Windows](https://git-scm.com/download/win), and PowerShell 5.1+. A system-wide Python installation is **not** required. uv installs its own Python 3.12 when needed, even if the Windows PATH Python is 3.14.7.
 - Sufficient free storage for PyTorch, ComfyUI, custom nodes and your models. Disk and VRAM requirements depend on the workflow. Intel Arc A/B GPUs and some Core Ultra iGPUs may be suitable, but support varies by device and driver; the installer checks `torch.xpu.is_available()` instead of assuming support from the GPU name.
 - Visual Studio C++ Build Tools are **not** required for standard XPU inference or GGUF installation. Building experimental Windows Triton XPU from source is a separate, advanced project.
 
@@ -34,9 +34,9 @@ Later, run `START_ComfyUI.bat`, `UPDATE_ComfyUI.bat`, `REPAIR_PyTorch_XPU.bat`, 
 
 The app listens at http://127.0.0.1:8188 when running with its default port.
 
-`Install.bat` installs ComfyUI, official Manager dependencies, PyTorch XPU and the four custom-node repositories below. `INSTALL_ComfyUI_Intel_Arc_XPU.bat` installs only the core and Manager dependencies; use `INSTALL_Custom_Nodes.bat` afterward if desired.
+`Install.bat` installs ComfyUI, creates `comfyui_venv` with uv-managed Python 3.12, installs official Manager dependencies and PyTorch XPU via `uv pip install --python <venv-python>`, and installs the four custom-node repositories below. `INSTALL_ComfyUI_Intel_Arc_XPU.bat` installs only the core and Manager dependencies; use `INSTALL_Custom_Nodes.bat` afterward if desired.
 
-Run `UPDATE_ComfyUI.bat` to update ComfyUI, PyTorch XPU, official Manager dependencies and the custom nodes. Run `REPAIR_PyTorch_XPU.bat` to force-reinstall the XPU wheels **inside the ComfyUI virtual environment only**.
+Run `UPDATE_ComfyUI.bat` to update ComfyUI, PyTorch XPU, official Manager dependencies and the custom nodes using uv for every Python package installation. Run `REPAIR_PyTorch_XPU.bat` to force-reinstall the XPU wheels **inside the ComfyUI virtual environment only**.
 
 These entry points accept an optional install folder as the first argument; their PowerShell counterparts accept `-InstallPath`. Omit it to use the saved marker (or, for Install, answer the prompt).
 
@@ -50,11 +50,25 @@ git pull --ff-only
 Install.bat
 ```
 
-If the installer was downloaded as a ZIP, download/extract the updated ZIP and run its `Install.bat`. Do **not** delete `C:\ComfyUI`: the script reuses the successful clone and proceeds to virtual environment creation. The revised installer runs a Python file instead of vulnerable inline `python -c` code, and checks Python before cloning for new installations. You can check just your local Python version using:
+If the installer was downloaded as a ZIP, download/extract the updated ZIP and run its `Install.bat`. Do **not** delete `C:\ComfyUI`: the script reuses the successful clone and proceeds to virtual environment creation. The revised installer runs a Python file instead of vulnerable inline `python -c` code, and checks uv-managed Python 3.12 before cloning for new installations. You can check uv's managed Python 3.12 (not the system Python) using:
 
 ```powershell
 .\ComfyUI-XPU.ps1 -Mode CheckPython
 ```
+
+## Python 3.14 on PATH: how uv handles it
+
+The installer assumes **uv is already installed**. It does not call system `python`, `python -m venv`, or `python -m pip` during environment setup. It uses:
+
+```powershell
+uv python install 3.12
+uv venv --python 3.12 --managed-python "I:\ComfyUI\comfyui_venv"
+uv pip install --python "I:\ComfyUI\comfyui_venv\Scripts\python.exe" -r "I:\ComfyUI\requirements.txt"
+```
+
+`uv python install 3.12` is idempotent. The installer automatically downloads a compatible uv-managed Python 3.12 if it is absent; **system Python 3.14.7 remains untouched**. Every uv package installation targets the absolute venv interpreter, never the global environment. The ComfyUI installation location is still read from the ignored `.comfyui-install-path` marker.
+
+If the `comfyui_venv` folder already exists with unsupported Python 3.14 or is incomplete, the installer **stops instead of deleting or overwriting it**. Back it up and rename it yourself before rerunning the installer. A prior failure at the Python check normally leaves no virtual environment and needs no cleanup.
 
 ## Stable vs nightly
 
