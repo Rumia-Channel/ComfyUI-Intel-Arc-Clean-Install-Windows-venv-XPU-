@@ -27,9 +27,10 @@ jobs:
         shell: powershell
         run: |
           $core = Get-Content -Raw .\ComfyUI-XPU.ps1
-          foreach ($required in @('whl/xpu', 'whl/nightly/xpu', 'manager_requirements.txt', 'pull', '--ff-only', 'torch.xpu.is_available()', 'ComfyUI-GGUF')) {
+          foreach ($required in @('whl/xpu', 'whl/nightly/xpu', 'manager_requirements.txt', 'pull', '--ff-only', 'verify_environment.py', 'ComfyUI-GGUF')) {
             if (-not $core.Contains($required)) { throw "Missing expected behavior: $required" }
           }
+          if (-not (Get-Content -Raw .\scripts\verify_environment.py).Contains('torch.xpu.is_available()')) { throw 'XPU probe missing' }
           if ($core -match 'Remove-Item|reset --hard|rmdir /s') { throw 'Unexpected destructive installation behavior' }
           Get-ChildItem -Filter '*.bat' | ForEach-Object {
             $body = Get-Content -Raw $_.FullName
@@ -51,26 +52,26 @@ jobs:
           $mockDir = Join-Path $env:RUNNER_TEMP 'mock_torch'
           New-Item -ItemType Directory -Path $mockDir -Force | Out-Null
           @'
-__version__ = "test-mock"
-class XPU:
-    @staticmethod
-    def is_available():
-        return True
-    @staticmethod
-    def get_device_name(index):
-        return "Mock Arc GPU"
-xpu = XPU()
-'@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
+          __version__ = "test-mock"
+          class XPU:
+              @staticmethod
+              def is_available():
+                  return True
+              @staticmethod
+              def get_device_name(index):
+                  return "Mock Arc GPU"
+          xpu = XPU()
+          '@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
           $env:PYTHONPATH = $mockDir
           python .\scripts\verify_environment.py xpu
           if ($LASTEXITCODE -ne 0) { throw 'Mocked XPU-available check failed' }
           @'
-__version__ = "test-mock"
-class XPU:
-    @staticmethod
-    def is_available():
-        return False
-xpu = XPU()
-'@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
+          __version__ = "test-mock"
+          class XPU:
+              @staticmethod
+              def is_available():
+                  return False
+          xpu = XPU()
+          '@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
           python .\scripts\verify_environment.py xpu
           if ($LASTEXITCODE -ne 4) { throw 'Mocked XPU-unavailable check did not return 4' }
