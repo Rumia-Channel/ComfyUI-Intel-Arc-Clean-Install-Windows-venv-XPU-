@@ -2,7 +2,7 @@
 # Stable XPU wheels are the default. Nightly and CPU fallback are opt-in.
 [CmdletBinding()]
 param(
-    [ValidateSet('Install', 'Update', 'Start', 'Nodes', 'Repair', 'PatchInfo')]
+    [ValidateSet('Install', 'Update', 'Start', 'Nodes', 'Repair', 'PatchInfo', 'CheckPython')]
     [string]$Mode = 'Install',
     [string]$InstallPath = 'C:\ComfyUI',
     [switch]$Nightly,
@@ -14,6 +14,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $InstallPath = [System.IO.Path]::GetFullPath($InstallPath)
 $VenvPython = Join-Path $InstallPath 'comfyui_venv\Scripts\python.exe'
+$VerifyScript = Join-Path $PSScriptRoot 'scripts\verify_environment.py'
 $StableIndex = 'https://download.pytorch.org/whl/xpu'
 $NightlyIndex = 'https://download.pytorch.org/whl/nightly/xpu'
 
@@ -74,15 +75,18 @@ function Install-Requirements {
 }
 
 function Test-Xpu {
-    # A working torch import is always required, even if CPU fallback was requested.
-    Invoke-Checked $VenvPython @('-c', 'import torch; print("PyTorch:", torch.__version__)')
-    & $VenvPython -c 'import torch,sys; ok=hasattr(torch,"xpu") and torch.xpu.is_available(); print("XPU available:",ok); print("GPU:",torch.xpu.get_device_name(0) if ok else "not detected"); sys.exit(0 if ok else 4)'
-    if ($LASTEXITCODE -ne 0) {
+    # Run a Python file instead of -c: Windows PowerShell 5.1 can strip quotes
+    # within the native-process argument used for inline Python statements.
+    & $VenvPython $VerifyScript xpu
+    $verifyExit = $LASTEXITCODE
+    if ($verifyExit -eq 4) {
         if ($AllowCpu) {
             Write-Warning 'Intel XPU is unavailable. Continuing because -AllowCpu was supplied.'
         } else {
             throw 'Intel XPU is unavailable. Update your Intel GPU driver and check hardware compatibility. Use -AllowCpu only if CPU fallback is intended.'
         }
+    } elseif ($verifyExit -ne 0) {
+        throw "PyTorch/XPU verification failed (exit $verifyExit). Review the Python error above."
     }
 }
 
@@ -117,10 +121,16 @@ function Assert-Python {
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
         throw 'Python not found on PATH. Install 64-bit Python 3.12 or 3.11.'
     }
-    Invoke-Checked 'python' @('-c', 'import sys; assert sys.maxsize > 2**32 and sys.version_info[:2] in ((3,11),(3,12)), "Use 64-bit Python 3.11 or 3.12"')
+    Invoke-Checked 'python' @($VerifyScript, 'python')
 }
 
 try {
+    if ($Mode -eq 'CheckPython') {
+        Assert-Python
+        Write-Host 'Python version check passed.'
+        exit 0
+    }
+
     if ($Mode -eq 'PatchInfo') {
         Write-Warning 'The legacy ComfyUI-GGUF Triton patch is retired. It is not applied automatically: the upstream installer removed it, and Intel calls native Windows Triton XPU experimental. GGUF itself works without that patch.'
         exit 2
@@ -128,6 +138,7 @@ try {
 
     if ($Mode -eq 'Install') {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git for Windows is required.' }
+        if (-not (Test-Path -LiteralPath $VenvPython)) { Assert-Python }
         if (Test-Path -LiteralPath $InstallPath) {
             if (-not (Test-Path -LiteralPath (Join-Path $InstallPath 'main.py'))) {
                 throw "The target path already exists but is not a ComfyUI installation: $InstallPath. Choose another folder; no files were deleted."
@@ -138,7 +149,6 @@ try {
             Invoke-Checked 'git' @('clone', '--depth', '1', 'https://github.com/Comfy-Org/ComfyUI.git', $InstallPath)
         }
         if (-not (Test-Path -LiteralPath $VenvPython)) {
-            Assert-Python
             Invoke-Checked 'python' @('-m', 'venv', (Join-Path $InstallPath 'comfyui_venv'))
         }
         Invoke-Checked $VenvPython @('-m', 'pip', 'install', '--upgrade', 'pip')
