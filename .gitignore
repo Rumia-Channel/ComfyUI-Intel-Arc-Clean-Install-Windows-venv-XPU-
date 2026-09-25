@@ -33,3 +33,6 @@ desktop.ini
 
 # Logs
 *.log
+
+# Local installation location (never commit a user's machine-specific path)
+/.comfyui-install-path
