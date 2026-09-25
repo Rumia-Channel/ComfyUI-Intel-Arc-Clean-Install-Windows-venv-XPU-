@@ -27,11 +27,13 @@ jobs:
         shell: powershell
         run: |
           $core = Get-Content -Raw .\ComfyUI-XPU.ps1
-          foreach ($required in @('whl/xpu', 'whl/nightly/xpu', 'manager_requirements.txt', 'pull', '--ff-only', 'verify_environment.py', 'ComfyUI-GGUF', 'Resolve-ComfyInstallPath', 'Save-ComfyInstallPathMarker')) {
+          foreach ($required in @('whl/xpu', 'whl/nightly/xpu', 'manager_requirements.txt', 'pull', '--ff-only', 'verify_environment.py', 'ComfyUI-GGUF', 'Resolve-ComfyInstallPath', 'Save-ComfyInstallPathMarker', 'uv', '--managed-python')) {
             if (-not $core.Contains($required)) { throw "Missing expected behavior: $required" }
           }
           if (-not (Get-Content -Raw .\scripts\verify_environment.py).Contains('torch.xpu.is_available()')) { throw 'XPU probe missing' }
           if ($core -match 'Remove-Item|reset --hard|rmdir /s') { throw 'Unexpected destructive installation behavior' }
+          if ($core -match "-m', 'pip'|python -m venv") { throw 'Legacy pip/venv setup remains' }
+          if (-not $core.Contains("'pip', 'install', '--python', " + '$VenvPython')) { throw 'uv must install into the selected venv' }
           Get-ChildItem -Filter '*.bat' | ForEach-Object {
             $body = Get-Content -Raw $_.FullName
             if (-not $body.Contains('ComfyUI-XPU.ps1')) { throw "Batch wrapper does not use shared installer: $($_.Name)" }
@@ -48,14 +50,24 @@ jobs:
         run: |
           & .\scripts\test_install_path.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Install-location tests failed' }
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           architecture: x64
-      - name: Exercise installer Python check on Windows PowerShell 5.1
+      - name: Exercise uv-managed Python check and virtual environment on Windows PowerShell 5.1
         shell: powershell
         run: |
           & .\ComfyUI-XPU.ps1 -Mode CheckPython
+          if ($LASTEXITCODE -ne 0) { throw 'uv-managed Python check failed' }
+          $venv = Join-Path $env:RUNNER_TEMP 'comfy uv smoke\comfyui_venv'
+          uv venv --python 3.12 --managed-python $venv
+          if ($LASTEXITCODE -ne 0) { throw 'uv venv failed' }
+          & (Join-Path $venv 'Scripts\python.exe') .\scripts\verify_environment.py python
+          if ($LASTEXITCODE -ne 0) { throw 'uv venv Python version check failed' }
+          uv pip list --python (Join-Path $venv 'Scripts\python.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'uv pip --python could not target the venv' }
       - name: Exercise XPU diagnostics without GPU hardware (mocked torch)
         shell: powershell
         run: |
