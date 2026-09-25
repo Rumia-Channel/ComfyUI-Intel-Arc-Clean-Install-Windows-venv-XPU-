@@ -75,3 +75,4 @@ jobs:
           '@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
           python .\scripts\verify_environment.py xpu
           if ($LASTEXITCODE -ne 4) { throw 'Mocked XPU-unavailable check did not return 4' }
+          $global:LASTEXITCODE = 0 # The nonzero exit was expected; keep the GitHub step successful.
