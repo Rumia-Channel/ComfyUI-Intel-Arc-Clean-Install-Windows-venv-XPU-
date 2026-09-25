@@ -163,12 +163,11 @@ try {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git for Windows is required.' }
         Assert-Uv
         if (Test-Path -LiteralPath $VenvPython) { Assert-VenvPython } else { Assert-Python }
-        if (Test-Path -LiteralPath $InstallPath) {
-            if (-not (Test-Path -LiteralPath (Join-Path $InstallPath 'main.py'))) {
-                throw "The target path already exists but is not a ComfyUI installation: $InstallPath. Choose another folder; no files were deleted."
-            }
+        . (Join-Path $PSScriptRoot 'scripts\install_target.ps1')
+        if (Test-ComfyExistingCheckout -Directory $InstallPath) {
             Update-Checkout $InstallPath
         } else {
+            # git clone supports a pre-existing empty destination directory.
             Write-Host "Cloning ComfyUI into $InstallPath"
             Invoke-Checked 'git' @('clone', '--depth', '1', 'https://github.com/Comfy-Org/ComfyUI.git', $InstallPath)
         }

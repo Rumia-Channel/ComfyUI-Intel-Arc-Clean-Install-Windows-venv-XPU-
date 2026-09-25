@@ -28,6 +28,8 @@ START_ComfyUI.bat
 Install.bat "D:\AI Models\ComfyUI"
 ```
 
+**Already created the destination folder?** That is fine if it is completely empty: the installer clones ComfyUI directly into it, including `I:\ComfyUI`. It also reuses an existing ComfyUI Git checkout with `main.py`. If the chosen path contains any other files (including hidden files or an incomplete Git checkout), installation stops without deleting or overwriting them; move or back them up yourself, or select a different folder. An existing path that is a file rather than a directory is also rejected.
+
 The installer saves the chosen location as one line of UTF-8 text in `<this installer repository>\.comfyui-install-path`. This marker is listed in `.gitignore`, so your machine-specific path is not committed. It is written after cloning/validating the ComfyUI checkout and before installing Python packages, so a failed installation can be resumed. Do not copy the marker into `C:\ComfyUI`; leave it beside the installer scripts.
 
 Later, run `START_ComfyUI.bat`, `UPDATE_ComfyUI.bat`, `REPAIR_PyTorch_XPU.bat`, or `INSTALL_Custom_Nodes.bat` without a path: each reads the saved marker automatically. Their `.ps1` equivalents work the same way. An explicit `.bat` first argument or `-InstallPath` in PowerShell overrides the marker **for that invocation**, but does not replace it unless the command is an Install. Maintenance scripts refuse to guess a path when there is no marker; run the installer once or provide an explicit path. Use the same installer folder for these scripts, or copy the ignored marker separately if moving to another installer checkout.

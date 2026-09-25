@@ -32,6 +32,7 @@ jobs:
           }
           if (-not (Get-Content -Raw .\scripts\verify_environment.py).Contains('torch.xpu.is_available()')) { throw 'XPU probe missing' }
           if ($core -match 'Remove-Item|reset --hard|rmdir /s') { throw 'Unexpected destructive installation behavior' }
+          if (-not $core.Contains('Test-ComfyExistingCheckout -Directory $InstallPath')) { throw 'Installer must check clone destination for empty existing folders' }
           if ($core -match "-m', 'pip'|python -m venv") { throw 'Legacy pip/venv setup remains' }
           if (-not $core.Contains("'pip', 'install', '--python', " + '$VenvPython')) { throw 'uv must install into the selected venv' }
           Get-ChildItem -Filter '*.bat' | ForEach-Object {
@@ -50,6 +51,11 @@ jobs:
         run: |
           & .\scripts\test_install_path.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Install-location tests failed' }
+      - name: Test existing-empty directory clone and nonempty directory protection
+        shell: powershell
+        run: |
+          & .\scripts\test_install_target.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Install-destination regression tests failed' }
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - uses: actions/setup-python@v5
