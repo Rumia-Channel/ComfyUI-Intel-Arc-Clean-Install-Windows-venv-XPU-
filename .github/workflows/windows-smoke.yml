@@ -35,3 +35,42 @@ jobs:
             $body = Get-Content -Raw $_.FullName
             if (-not $body.Contains('ComfyUI-XPU.ps1')) { throw "Batch wrapper does not use shared installer: $($_.Name)" }
           }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Exercise installer Python check on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          & .\ComfyUI-XPU.ps1 -Mode CheckPython
+      - name: Exercise XPU diagnostics without GPU hardware (mocked torch)
+        shell: powershell
+        run: |
+          python .\scripts\verify_environment.py python
+          if ($LASTEXITCODE -ne 0) { throw 'Python version diagnostic failed' }
+          $mockDir = Join-Path $env:RUNNER_TEMP 'mock_torch'
+          New-Item -ItemType Directory -Path $mockDir -Force | Out-Null
+          @'
+__version__ = "test-mock"
+class XPU:
+    @staticmethod
+    def is_available():
+        return True
+    @staticmethod
+    def get_device_name(index):
+        return "Mock Arc GPU"
+xpu = XPU()
+'@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
+          $env:PYTHONPATH = $mockDir
+          python .\scripts\verify_environment.py xpu
+          if ($LASTEXITCODE -ne 0) { throw 'Mocked XPU-available check failed' }
+          @'
+__version__ = "test-mock"
+class XPU:
+    @staticmethod
+    def is_available():
+        return False
+xpu = XPU()
+'@ | Set-Content -Path (Join-Path $mockDir 'torch.py') -Encoding UTF8
+          python .\scripts\verify_environment.py xpu
+          if ($LASTEXITCODE -ne 4) { throw 'Mocked XPU-unavailable check did not return 4' }
