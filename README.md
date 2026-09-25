@@ -22,18 +22,23 @@ Install.bat
 START_ComfyUI.bat
 ```
 
-By default ComfyUI is installed in `C:\ComfyUI`, and the app listens at http://127.0.0.1:8188. To choose a path containing spaces:
+**Installation location:** Running `Install.bat` or `Install.ps1` without a path now asks where to install ComfyUI. Press Enter to accept the displayed suggestion (`C:\ComfyUI` on first run, the previously selected path thereafter). You can still supply a path explicitly, including spaces:
 
 ```bat
 Install.bat "D:\AI Models\ComfyUI"
-START_ComfyUI.bat "D:\AI Models\ComfyUI"
 ```
+
+The installer saves the chosen location as one line of UTF-8 text in `<this installer repository>\.comfyui-install-path`. This marker is listed in `.gitignore`, so your machine-specific path is not committed. It is written after cloning/validating the ComfyUI checkout and before installing Python packages, so a failed installation can be resumed. Do not copy the marker into `C:\ComfyUI`; leave it beside the installer scripts.
+
+Later, run `START_ComfyUI.bat`, `UPDATE_ComfyUI.bat`, `REPAIR_PyTorch_XPU.bat`, or `INSTALL_Custom_Nodes.bat` without a path: each reads the saved marker automatically. Their `.ps1` equivalents work the same way. An explicit `.bat` first argument or `-InstallPath` in PowerShell overrides the marker **for that invocation**, but does not replace it unless the command is an Install. Maintenance scripts refuse to guess a path when there is no marker; run the installer once or provide an explicit path. Use the same installer folder for these scripts, or copy the ignored marker separately if moving to another installer checkout.
+
+The app listens at http://127.0.0.1:8188 when running with its default port.
 
 `Install.bat` installs ComfyUI, official Manager dependencies, PyTorch XPU and the four custom-node repositories below. `INSTALL_ComfyUI_Intel_Arc_XPU.bat` installs only the core and Manager dependencies; use `INSTALL_Custom_Nodes.bat` afterward if desired.
 
 Run `UPDATE_ComfyUI.bat` to update ComfyUI, PyTorch XPU, official Manager dependencies and the custom nodes. Run `REPAIR_PyTorch_XPU.bat` to force-reinstall the XPU wheels **inside the ComfyUI virtual environment only**.
 
-All these entry points accept the install folder as the first argument; their PowerShell counterparts accept `-InstallPath`.
+These entry points accept an optional install folder as the first argument; their PowerShell counterparts accept `-InstallPath`. Omit it to use the saved marker (or, for Install, answer the prompt).
 
 ## Recovery from the September 2026 Python quotation error
 

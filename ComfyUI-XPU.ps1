@@ -4,7 +4,7 @@
 param(
     [ValidateSet('Install', 'Update', 'Start', 'Nodes', 'Repair', 'PatchInfo', 'CheckPython')]
     [string]$Mode = 'Install',
-    [string]$InstallPath = 'C:\ComfyUI',
+    [string]$InstallPath,
     [switch]$Nightly,
     [switch]$AllowCpu,
     [switch]$SkipNodes,
@@ -12,8 +12,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$InstallPath = [System.IO.Path]::GetFullPath($InstallPath)
-$VenvPython = Join-Path $InstallPath 'comfyui_venv\Scripts\python.exe'
+$PathProvided = $PSBoundParameters.ContainsKey('InstallPath')
 $VerifyScript = Join-Path $PSScriptRoot 'scripts\verify_environment.py'
 $StableIndex = 'https://download.pytorch.org/whl/xpu'
 $NightlyIndex = 'https://download.pytorch.org/whl/nightly/xpu'
@@ -136,6 +135,12 @@ try {
         exit 2
     }
 
+    # Installation always asks when the caller has not explicitly provided a path.
+    # Other commands use the locally ignored marker instead of assuming C:\ComfyUI.
+    . (Join-Path $PSScriptRoot 'scripts\install_path.ps1')
+    $InstallPath = Resolve-ComfyInstallPath -ExplicitPath $InstallPath -WasSpecified $PathProvided -AskDuringInstall ($Mode -eq 'Install') -ScriptDirectory $PSScriptRoot
+    $VenvPython = Join-Path $InstallPath 'comfyui_venv\Scripts\python.exe'
+
     if ($Mode -eq 'Install') {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git for Windows is required.' }
         if (-not (Test-Path -LiteralPath $VenvPython)) { Assert-Python }
@@ -148,6 +153,9 @@ try {
             Write-Host "Cloning ComfyUI into $InstallPath"
             Invoke-Checked 'git' @('clone', '--depth', '1', 'https://github.com/Comfy-Org/ComfyUI.git', $InstallPath)
         }
+        # Record the selected location after validating/cloning ComfyUI, even if a later
+        # package installation fails, so the next run can resume at the same location.
+        Save-ComfyInstallPathMarker -ScriptDirectory $PSScriptRoot -PathValue $InstallPath
         if (-not (Test-Path -LiteralPath $VenvPython)) {
             Invoke-Checked 'python' @('-m', 'venv', (Join-Path $InstallPath 'comfyui_venv'))
         }
