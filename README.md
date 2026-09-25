@@ -35,6 +35,22 @@ Run `UPDATE_ComfyUI.bat` to update ComfyUI, PyTorch XPU, official Manager depend
 
 All these entry points accept the install folder as the first argument; their PowerShell counterparts accept `-InstallPath`.
 
+## Recovery from the September 2026 Python quotation error
+
+If a previous installer printed `NameError: name 'Use' is not defined` immediately after cloning `C:\ComfyUI`, update **this installer repository** (not `C:\ComfyUI`) and rerun:
+
+```bat
+cd /d "PATH\TO\ComfyUI-Intel-Arc-Clean-Install-Windows-venv-XPU-"
+git pull --ff-only
+Install.bat
+```
+
+If the installer was downloaded as a ZIP, download/extract the updated ZIP and run its `Install.bat`. Do **not** delete `C:\ComfyUI`: the script reuses the successful clone and proceeds to virtual environment creation. The revised installer runs a Python file instead of vulnerable inline `python -c` code, and checks Python before cloning for new installations. You can check just your local Python version using:
+
+```powershell
+.\ComfyUI-XPU.ps1 -Mode CheckPython
+```
+
 ## Stable vs nightly
 
 Stable XPU is the default, using the official wheel index:
