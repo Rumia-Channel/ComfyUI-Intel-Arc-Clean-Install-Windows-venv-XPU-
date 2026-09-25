@@ -25,13 +25,28 @@ function Invoke-Checked {
     }
 }
 
+function Assert-Uv {
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        throw 'uv is required. Install uv from https://docs.astral.sh/uv/getting-started/installation/ and reopen your terminal.'
+    }
+    Invoke-Checked 'uv' @('--version')
+}
+
+function Assert-VenvPython {
+    if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
+        throw "Virtual environment Python is missing: $VenvPython. Run Install first."
+    }
+    & $VenvPython $VerifyScript python
+    if ($LASTEXITCODE -ne 0) {
+        throw "Existing comfyui_venv uses an unsupported Python. Back up and rename the virtual environment yourself, then rerun Install. No files were deleted: $VenvPython"
+    }
+}
+
 function Assert-Installed {
     if (-not (Test-Path -LiteralPath (Join-Path $InstallPath 'main.py') -PathType Leaf)) {
         throw "ComfyUI not found at $InstallPath. Run Install first."
     }
-    if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
-        throw "The ComfyUI virtual environment was not found at $VenvPython. Run Install first."
-    }
+    Assert-VenvPython
 }
 
 function Assert-CleanGit {
@@ -54,22 +69,21 @@ function Update-Checkout {
 
 function Install-PyTorchXpu {
     $index = if ($Nightly) { $NightlyIndex } else { $StableIndex }
-    $arguments = @('-m', 'pip', 'install', '--upgrade')
-    # Even if a newer CPU/nightly wheel is installed, explicitly select an XPU wheel
-    # from the chosen index. Pip --upgrade alone may keep the existing wheel.
-    $arguments += '--force-reinstall'
-    if ($Nightly) { $arguments += '--pre' }
+    $arguments = @('pip', 'install', '--python', $VenvPython, '--upgrade',
+                   '--reinstall-package', 'torch', '--reinstall-package', 'torchvision',
+                   '--reinstall-package', 'torchaudio')
+    if ($Nightly) { $arguments += @('--prerelease', 'allow') }
     $arguments += @('torch', 'torchvision', 'torchaudio', '--index-url', $index)
-    Write-Host "Installing PyTorch XPU from $index"
-    Invoke-Checked $VenvPython $arguments
+    Write-Host "Installing PyTorch XPU with uv from $index"
+    Invoke-Checked 'uv' $arguments
 }
 
 function Install-Requirements {
-    Invoke-Checked $VenvPython @('-m', 'pip', 'install', '-r', (Join-Path $InstallPath 'requirements.txt'))
+    Invoke-Checked 'uv' @('pip', 'install', '--python', $VenvPython, '-r', (Join-Path $InstallPath 'requirements.txt'))
     $managerReq = Join-Path $InstallPath 'manager_requirements.txt'
     if (Test-Path -LiteralPath $managerReq) {
         Write-Host 'Installing the ComfyUI built-in Manager dependencies...'
-        Invoke-Checked $VenvPython @('-m', 'pip', 'install', '-r', $managerReq)
+        Invoke-Checked 'uv' @('pip', 'install', '--python', $VenvPython, '-r', $managerReq)
     }
 }
 
@@ -109,7 +123,7 @@ function Install-CustomNodes {
         }
         $req = Join-Path $directory 'requirements.txt'
         if (Test-Path -LiteralPath $req) {
-            Invoke-Checked $VenvPython @('-m', 'pip', 'install', '-r', $req)
+            Invoke-Checked 'uv' @('pip', 'install', '--python', $VenvPython, '-r', $req)
         }
     }
     # Re-check after extensions have installed their own dependencies.
@@ -117,16 +131,20 @@ function Install-CustomNodes {
 }
 
 function Assert-Python {
-    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-        throw 'Python not found on PATH. Install 64-bit Python 3.12 or 3.11.'
+    Assert-Uv
+    # uv-managed Python is independent of the system PATH (which may contain 3.14).
+    Invoke-Checked 'uv' @('python', 'install', '3.12')
+    $managedPython = & uv python find 3.12 --managed-python
+    if ($LASTEXITCODE -ne 0 -or -not $managedPython) {
+        throw 'uv cannot locate its managed Python 3.12 interpreter.'
     }
-    Invoke-Checked 'python' @($VerifyScript, 'python')
+    Invoke-Checked ([string]($managedPython | Select-Object -Last 1).Trim()) @($VerifyScript, 'python')
 }
 
 try {
     if ($Mode -eq 'CheckPython') {
         Assert-Python
-        Write-Host 'Python version check passed.'
+        Write-Host 'uv-managed Python 3.12 check passed.'
         exit 0
     }
 
@@ -143,7 +161,8 @@ try {
 
     if ($Mode -eq 'Install') {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git for Windows is required.' }
-        if (-not (Test-Path -LiteralPath $VenvPython)) { Assert-Python }
+        Assert-Uv
+        if (Test-Path -LiteralPath $VenvPython) { Assert-VenvPython } else { Assert-Python }
         if (Test-Path -LiteralPath $InstallPath) {
             if (-not (Test-Path -LiteralPath (Join-Path $InstallPath 'main.py'))) {
                 throw "The target path already exists but is not a ComfyUI installation: $InstallPath. Choose another folder; no files were deleted."
@@ -157,29 +176,35 @@ try {
         # package installation fails, so the next run can resume at the same location.
         Save-ComfyInstallPathMarker -ScriptDirectory $PSScriptRoot -PathValue $InstallPath
         if (-not (Test-Path -LiteralPath $VenvPython)) {
-            Invoke-Checked 'python' @('-m', 'venv', (Join-Path $InstallPath 'comfyui_venv'))
+            $venvDir = Join-Path $InstallPath 'comfyui_venv'
+            if (Test-Path -LiteralPath $venvDir) {
+                throw "Virtual environment directory exists but Python is missing: $venvDir. Rename it manually if you want a clean uv environment; no files were deleted."
+            }
+            Invoke-Checked 'uv' @('venv', '--python', '3.12', '--managed-python', $venvDir)
         }
-        Invoke-Checked $VenvPython @('-m', 'pip', 'install', '--upgrade', 'pip')
+        Assert-VenvPython
         Install-PyTorchXpu
         Install-Requirements
         Test-Xpu
         if (-not $SkipNodes) { Install-CustomNodes }
         Write-Host "Installation complete: $InstallPath"
     } elseif ($Mode -eq 'Update') {
+        Assert-Uv
         Assert-Installed
         Update-Checkout $InstallPath
-        Invoke-Checked $VenvPython @('-m', 'pip', 'install', '--upgrade', 'pip')
         Install-PyTorchXpu
         Install-Requirements
         Test-Xpu
         if (-not $SkipNodes) { Install-CustomNodes }
         Write-Host "Update complete: $InstallPath"
     } elseif ($Mode -eq 'Repair') {
+        Assert-Uv
         Assert-Installed
         Install-PyTorchXpu
         Test-Xpu
         Write-Host 'PyTorch XPU repair complete.'
     } elseif ($Mode -eq 'Nodes') {
+        Assert-Uv
         Install-CustomNodes
         Write-Host 'Custom node installation complete.'
     } elseif ($Mode -eq 'Start') {
