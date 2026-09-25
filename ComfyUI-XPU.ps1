@@ -158,7 +158,7 @@ try {
         Write-Host "Update complete: $InstallPath"
     } elseif ($Mode -eq 'Repair') {
         Assert-Installed
-        Install-PyTorchXpu -Force
+        Install-PyTorchXpu
         Test-Xpu
         Write-Host 'PyTorch XPU repair complete.'
     } elseif ($Mode -eq 'Nodes') {
